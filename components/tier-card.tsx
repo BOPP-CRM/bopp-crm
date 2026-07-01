@@ -101,7 +101,7 @@ export default function TierCard() {
         }}
       >
         {tierInfo.nextTier
-          ? `${userProfile?.displayName || "คุณ"} อีก ${tierInfo.remainingToNext.toLocaleString()} แต้มก็จะเป็น ${tierInfo.nextTier.name} แล้ว`
+          ? `${userProfile?.displayName || "คุณ"} อีก ${tierInfo.remainingToNext.toLocaleString()} บาทก็จะเป็น ${tierInfo.nextTier.name} แล้ว`
           : "คุณอยู่ในระดับสูงสุดแล้ว"}
         <IconSparklesFilled size={16} />
       </p>

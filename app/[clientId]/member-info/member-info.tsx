@@ -263,6 +263,7 @@ export default function MemberInfo() {
               placeholder="เบอร์โทรศัพท์"
               icon={<IconMapPin size={20} />}
               inputMode="numeric"
+              disabled
             />
           </div>
         )}
