@@ -53,6 +53,99 @@ type ReceiptCameraModalContextType = {
 const ReceiptCameraModalContext =
   createContext<ReceiptCameraModalContextType | null>(null);
 
+const CAMERA_VIDEO_CONSTRAINTS: MediaTrackConstraints = {
+  facingMode: { ideal: "environment" },
+  width: { ideal: 1920, min: 1280 },
+  height: { ideal: 1080, min: 720 },
+};
+
+const JPEG_CAPTURE_QUALITY = 0.95;
+
+async function applyHighResolutionConstraints(track: MediaStreamTrack) {
+  const capabilities = track.getCapabilities?.();
+  if (!capabilities?.width || !capabilities?.height) return;
+
+  const targetWidth = Math.min(capabilities.width.max ?? 1920, 1920);
+  const targetHeight = Math.min(capabilities.height.max ?? 1080, 1080);
+
+  try {
+    await track.applyConstraints({
+      width: { ideal: targetWidth },
+      height: { ideal: targetHeight },
+    });
+  } catch (error) {
+    console.warn("Could not apply camera resolution constraints", error);
+  }
+}
+
+async function waitForVideoReady(video: HTMLVideoElement) {
+  if (video.readyState >= HTMLMediaElement.HAVE_METADATA) return;
+
+  await new Promise<void>((resolve) => {
+    const onReady = () => {
+      video.removeEventListener("loadedmetadata", onReady);
+      resolve();
+    };
+    video.addEventListener("loadedmetadata", onReady);
+  });
+}
+
+function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result;
+      if (typeof result !== "string") {
+        reject(new Error("Failed to read image"));
+        return;
+      }
+      resolve(result.replace(/^data:image\/\w+;base64,/, ""));
+    };
+    reader.onerror = () => reject(reader.error ?? new Error("Failed to read image"));
+    reader.readAsDataURL(blob);
+  });
+}
+
+async function captureFromVideo(video: HTMLVideoElement): Promise<string> {
+  await waitForVideoReady(video);
+  await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+
+  if (!video.videoWidth || !video.videoHeight) {
+    throw new Error("Video is not ready");
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = video.videoWidth;
+  canvas.height = video.videoHeight;
+
+  const context = canvas.getContext("2d");
+  if (!context) {
+    throw new Error("Canvas is not supported");
+  }
+
+  context.drawImage(video, 0, 0, canvas.width, canvas.height);
+  const dataUrl = canvas.toDataURL("image/jpeg", JPEG_CAPTURE_QUALITY);
+  return dataUrl.replace(/^data:image\/\w+;base64,/, "");
+}
+
+async function capturePhoto(
+  stream: MediaStream,
+  video: HTMLVideoElement,
+): Promise<string> {
+  const track = stream.getVideoTracks()[0];
+  if (track && "ImageCapture" in window) {
+    try {
+      const imageCapture = new ImageCapture(track);
+      const blob = await imageCapture.takePhoto();
+      return blobToBase64(blob);
+    } catch (error) {
+      console.warn("ImageCapture failed, falling back to video frame", error);
+    }
+  }
+
+  return captureFromVideo(video);
+}
+
 function ReceiptCameraModal({
   options,
   onClose,
@@ -105,7 +198,7 @@ function ReceiptCameraModal({
       stopCamera();
 
       const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: "environment" },
+        video: CAMERA_VIDEO_CONSTRAINTS,
         audio: false,
       });
 
@@ -114,12 +207,18 @@ function ReceiptCameraModal({
         return;
       }
 
+      const videoTrack = stream.getVideoTracks()[0];
+      if (videoTrack) {
+        await applyHighResolutionConstraints(videoTrack);
+      }
+
       streamRef.current = stream;
 
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
         try {
           await videoRef.current.play();
+          await waitForVideoReady(videoRef.current);
         } catch (error) {
           if (error instanceof DOMException && error.name === "AbortError") {
             return;
@@ -146,18 +245,11 @@ function ReceiptCameraModal({
   const handleCapture = async () => {
     try {
       const video = videoRef.current;
-      if (!video?.videoWidth || !video.videoHeight) return;
+      const stream = streamRef.current;
+      if (!video || !stream) return;
 
-      const canvas = document.createElement("canvas");
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-
-      const context = canvas.getContext("2d");
-      if (!context) return;
-
-      context.drawImage(video, 0, 0, canvas.width, canvas.height);
-      const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
-      setReceiptImage(dataUrl.replace(/^data:image\/\w+;base64,/, ""));
+      const base64Image = await capturePhoto(stream, video);
+      setReceiptImage(base64Image);
       stopCamera();
     } catch {
       await openAlert({
@@ -282,7 +374,7 @@ function ReceiptCameraModal({
           <img
             src={`data:image/jpeg;base64,${receiptImage}`}
             alt="receipt-preview"
-            className="w-full h-full bg-black object-cover"
+            className="w-full h-full bg-black object-contain"
           />
 
           <div
