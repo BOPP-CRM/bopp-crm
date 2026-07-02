@@ -13,6 +13,7 @@ import {
 import { useAlertModalContext } from "./alert-modal-provider";
 import {
   IconAlertTriangle,
+  IconBorderCorners,
   IconCamera,
   IconRosetteDiscountCheck,
   IconX,
@@ -29,9 +30,11 @@ import {
   mapDetectionPointsToImage,
 } from "@/util/receipt-image-crop";
 import { ReceiptCropEditor } from "@/components/receipt-crop-editor";
+import { useRouter } from "next/navigation";
 
 export type ReceiptSubmitPayload = {
   receiptNumber: string;
+  amount: number;
   receiptImage: string;
 };
 
@@ -139,7 +142,8 @@ function blobToBase64(blob: Blob): Promise<string> {
       }
       resolve(result.replace(/^data:image\/\w+;base64,/, ""));
     };
-    reader.onerror = () => reject(reader.error ?? new Error("Failed to read image"));
+    reader.onerror = () =>
+      reject(reader.error ?? new Error("Failed to read image"));
     reader.readAsDataURL(blob);
   });
 }
@@ -205,6 +209,7 @@ function ReceiptCameraModal({
   onClose: () => void;
 }) {
   const { openAlert, setFullLoading } = useAlertModalContext();
+  const router = useRouter();
 
   const primaryColor =
     options.primaryColor ||
@@ -223,9 +228,12 @@ function ReceiptCameraModal({
   const clientConfig = options.clientConfig;
 
   const [receiptNumber, setReceiptNumber] = useState("");
+  const [receiptAmount, setReceiptAmount] = useState<number | undefined>(0);
   const [rawReceiptImage, setRawReceiptImage] = useState("");
   const [croppedReceiptImage, setCroppedReceiptImage] = useState("");
-  const [postCaptureStep, setPostCaptureStep] = useState<"crop" | "submit">("crop");
+  const [postCaptureStep, setPostCaptureStep] = useState<"crop" | "submit">(
+    "crop",
+  );
   const [cropPoints, setCropPoints] = useState<ReceiptPoint[]>([]);
   const [imageDimensions, setImageDimensions] = useState({
     width: 1,
@@ -347,7 +355,10 @@ function ReceiptCameraModal({
       return;
     }
 
-    const scale = Math.min(1, DETECTION_MAX_WIDTH / Math.max(video.videoWidth, 1));
+    const scale = Math.min(
+      1,
+      DETECTION_MAX_WIDTH / Math.max(video.videoWidth, 1),
+    );
     const targetWidth = Math.max(1, Math.round(video.videoWidth * scale));
     const targetHeight = Math.max(1, Math.round(video.videoHeight * scale));
     canvas.width = targetWidth;
@@ -471,6 +482,15 @@ function ReceiptCameraModal({
       return;
     }
 
+    if (!receiptAmount || receiptAmount <= 0) {
+      await openAlert({
+        title: "ข้อมูลไม่ครบ",
+        message: "กรุณากรอกจำนวนเงิน",
+        icon: <IconAlertTriangle size={24} />,
+      });
+      return;
+    }
+
     if (!croppedReceiptImage) {
       await openAlert({
         title: "ข้อมูลไม่ครบ",
@@ -485,6 +505,7 @@ function ReceiptCameraModal({
 
       const result = await options.onSubmit?.({
         receiptNumber: receiptNumber.trim(),
+        amount: receiptAmount,
         receiptImage: croppedReceiptImage,
       });
 
@@ -505,6 +526,9 @@ function ReceiptCameraModal({
         title: "ส่งใบเสร็จสำเร็จ",
         message: "กรุณารอการตรวจสอบจากร้านค้า",
         icon: <IconRosetteDiscountCheck size={24} />,
+        onConfirm: () => {
+          router.push(`/${options.clientConfig?.slug}/member-receipt`);
+        },
       });
       onClose();
     } catch (error) {
@@ -626,7 +650,8 @@ function ReceiptCameraModal({
               className="mb-4 text-center text-sm"
               style={{ color: clientConfig?.ui?.text_gray_color }}
             >
-              ลากมุมหรือขอบสีเพื่อปรับกรอบใบเสร็จ หรือใช้สองนิ้วซูมเพื่อดูใกล้ขึ้น
+              ลากมุมหรือขอบสีเพื่อปรับกรอบใบเสร็จ
+              หรือใช้สองนิ้วซูมเพื่อดูใกล้ขึ้น
             </p>
             <div className="flex gap-3">
               <button
@@ -675,18 +700,18 @@ function ReceiptCameraModal({
             style={{ background: clientConfig?.ui?.surface_color }}
           >
             <div
-              className="mb-3 flex justify-between"
+              className="w-full flex justify-end"
               style={{
                 color: clientConfig?.ui.text_color,
               }}
             >
-              <p className="block text-lg font-semibold">เลขใบเสร็จ</p>
               <div className="flex items-center gap-4">
                 <button
                   type="button"
                   className="flex items-center gap-1"
                   onClick={handleBackToCrop}
                 >
+                  <IconBorderCorners size={20} />
                   <p>แก้กรอบ</p>
                 </button>
                 <button
@@ -700,16 +725,44 @@ function ReceiptCameraModal({
               </div>
             </div>
 
-            <input
-              value={receiptNumber}
-              onChange={(event) => setReceiptNumber(event.target.value)}
-              placeholder="กรอกเลขใบเสร็จ"
-              className="w-full rounded-xl px-4 py-5"
+            <div
+              className="flex flex-col gap-4"
               style={{
-                border: `1px solid ${textGrayColor}`,
-                color: clientConfig?.ui?.text_color,
+                color: clientConfig?.ui.text_color,
               }}
-            />
+            >
+              <div>
+                <p className="block font-semibold mb-1">เลขใบเสร็จ</p>
+                <input
+                  value={receiptNumber}
+                  onChange={(event) => setReceiptNumber(event.target.value)}
+                  placeholder="เลขใบเสร็จ"
+                  className="w-full rounded-xl px-3 py-4"
+                  style={{
+                    border: `1px solid ${textGrayColor}`,
+                    color: clientConfig?.ui?.text_color,
+                  }}
+                />
+              </div>
+
+              <div>
+                <p className="block font-semibold mb-1">จำนวนเงิน</p>
+                <input
+                  type="number"
+                  value={receiptAmount ?? ""}
+                  onChange={(event) => {
+                    const value = event.target.value;
+                    setReceiptAmount(value === "" ? undefined : Number(value));
+                  }}
+                  placeholder="จำนวนเงิน"
+                  className="w-full rounded-xl px-3 py-4"
+                  style={{
+                    border: `1px solid ${textGrayColor}`,
+                    color: clientConfig?.ui?.text_color,
+                  }}
+                />
+              </div>
+            </div>
 
             <button
               style={{
@@ -717,7 +770,7 @@ function ReceiptCameraModal({
                 boxShadow: `0 8px 24px -6px color-mix(in oklch,${primaryColor} 60%, transparent)`,
                 color: clientConfig?.ui?.button_text_color,
               }}
-              className="mt-5 flex h-14 w-full cursor-pointer items-center justify-center gap-3 rounded-[14px] p-2 text-center text-[15px]"
+              className="mt-4 flex h-14 w-full cursor-pointer items-center justify-center gap-3 rounded-[14px] p-2 text-center text-[15px]"
               onClick={handleSubmit}
             >
               ส่งใบเสร็จ

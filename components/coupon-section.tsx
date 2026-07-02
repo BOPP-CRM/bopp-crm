@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import { useApp } from "./providers/app-provider";
 import CouponCard from "./coupon-card";
 import { useRouter } from "next/navigation";
+import { IconTicketOff } from "@tabler/icons-react";
 
 export default function CouponSection() {
   const { backendClient, clientConfig, userPoint } = useApp();
@@ -28,6 +29,52 @@ export default function CouponSection() {
       >
         สิทธิพิเศษทั้งหมด
       </div>
+
+      {coupons.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: clientConfig.ui.surface_color }}
+          >
+            <IconTicketOff size={30} color={clientConfig.ui.text_gray_color} />
+          </div>
+          <div className="text-center">
+            <p
+              className="text-lg font-semibold"
+              style={{ color: clientConfig.ui.text_color }}
+            >
+              ยังไม่มีรายการสิทธิพิเศษ
+            </p>
+            <p
+              className="text-sm mt-1"
+              style={{ color: clientConfig.ui.text_gray_color }}
+            >
+              เมื่อคุณมีสิทธิพิเศษ รายการจะแสดงที่นี่
+            </p>
+          </div>
+        </div>
+      ) : (
+        <div className="flex flex-col gap-4">
+          {coupons.map((coupon, index) => {
+            const currentPoint =
+              userPoint.find(
+                (point) => point.currency.id === coupon.currency.id,
+              )?.balance || 0;
+            const canUse = currentPoint >= coupon.value;
+
+            return (
+              <CouponCard
+                key={index}
+                coupon={coupon}
+                canUse={canUse}
+                onClick={() => {
+                  router.push(`/${clientConfig.slug}/coupon/${coupon.id}`);
+                }}
+              />
+            );
+          })}
+        </div>
+      )}
       <div className="flex flex-col gap-4">
         {coupons.map((coupon, index) => {
           const currentPoint =

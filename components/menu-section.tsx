@@ -84,7 +84,7 @@ export default function MenuSection() {
               textWhiteColor: clientConfig.ui.text_white_color,
               textGrayColor: clientConfig.ui.text_gray_color,
               backgroundWhiteColor: clientConfig.ui.background_white_color,
-              onSubmit: async ({ receiptNumber, receiptImage }) => {
+              onSubmit: async ({ receiptNumber, amount, receiptImage }) => {
                 if (!userProfile?.userId) {
                   return;
                 }
@@ -93,6 +93,7 @@ export default function MenuSection() {
                   clientConfig.slug,
                   userProfile.userId,
                   receiptNumber,
+                  amount,
                   receiptImage,
                 );
 

@@ -353,6 +353,7 @@ export class BackendClient {
     clientId: string,
     userId: string,
     receiptNumber: string,
+    amount: number,
     receiptImage: string,
   ): Promise<ErrorResponse | void> {
     try {
@@ -360,6 +361,7 @@ export class BackendClient {
         `/partner/${clientId}/user/${userId}/receipt`,
         {
           receipt_number: receiptNumber,
+          amount: amount,
           receipt_image: receiptImage,
         },
       );

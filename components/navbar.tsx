@@ -135,7 +135,11 @@ export default function Navbar() {
                       textGrayColor: clientConfig.ui.text_gray_color,
                       backgroundWhiteColor:
                         clientConfig.ui.background_white_color,
-                      onSubmit: async ({ receiptNumber, receiptImage }) => {
+                      onSubmit: async ({
+                        receiptNumber,
+                        amount,
+                        receiptImage,
+                      }) => {
                         if (!userProfile?.userId) {
                           return;
                         }
@@ -144,6 +148,7 @@ export default function Navbar() {
                           clientConfig.slug,
                           userProfile.userId,
                           receiptNumber,
+                          amount,
                           receiptImage,
                         );
 
