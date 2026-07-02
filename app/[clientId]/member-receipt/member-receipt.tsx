@@ -150,6 +150,12 @@ export default function MemberReceipt() {
                         {STATUS_LABEL[receipt.state]}
                       </span>
                     </div>
+                    <p
+                      className="text-xs font-medium truncate"
+                      style={{ color: clientConfig.ui.text_color }}
+                    >
+                      {receipt.amount.toLocaleString()} บาท
+                    </p>
 
                     <div className="flex items-center justify-between gap-2">
                       {/* <p
