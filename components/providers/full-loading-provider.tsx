@@ -11,7 +11,7 @@ const FullLoadingContext = createContext((value: boolean) => value);
 
 function FullLoading() {
   return (
-    <div className="fixed inset-0 flex items-center justify-center bg-[#00000080] z-50">
+    <div className="fixed inset-0 z-150 flex items-center justify-center bg-[#00000080]">
       <div className="w-12 h-12 border-4 border-gray-300 border-t-blue-500 rounded-full animate-spin"></div>
     </div>
   );

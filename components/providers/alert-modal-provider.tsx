@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useFullLoadingContext } from "./full-loading-provider";
 
 export type OpenAlertOptions = {
   title?: string;
@@ -116,6 +117,7 @@ function AlertModal({
 }
 
 export function AlertModalProvider({ children }: { children: ReactNode }) {
+  const setFullLoading = useFullLoadingContext();
   const [alertOptions, setAlertOptions] = useState<OpenAlertOptions | null>(
     null,
   );
@@ -175,7 +177,7 @@ export function AlertModalProvider({ children }: { children: ReactNode }) {
       value={{
         openAlert,
         closeAlert,
-        setFullLoading: () => {},
+        setFullLoading,
         setAlertClientConfig,
       }}
     >

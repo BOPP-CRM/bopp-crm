@@ -1,5 +1,6 @@
 "use client";
 import { useApp } from "@/components/providers/app-provider";
+import { Sk } from "@/components/skeleton";
 import { UserReceipt } from "@/types/request";
 import { IconChevronLeft, IconReceipt, IconX } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
@@ -26,22 +27,22 @@ export default function MemberReceipt() {
     userProfile,
     backendClient,
     openAlert,
-    setFullLoading,
     setIsShowNavbar,
   } = useApp();
   const router = useRouter();
 
   const [receipts, setReceipts] = useState<UserReceipt[]>([]);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const fetchData = async () => {
     if (!userProfile || !clientConfig.slug) return;
-    setFullLoading(true);
+    setIsLoading(true);
     const res = await backendClient.getUserReceipt(
       clientConfig.slug,
       userProfile.userId,
     );
-    setFullLoading(false);
+    setIsLoading(false);
 
     if (res && !("error" in res)) {
       setReceipts(res);
@@ -96,7 +97,19 @@ export default function MemberReceipt() {
         </p>
       </div>
 
-      {receipts.length === 0 ? (
+      {isLoading && (
+        <div className="flex flex-col gap-3">
+          {[1, 2, 3].map((i) => (
+            <Sk
+              key={i}
+              className="h-24 rounded-2xl"
+              bg={clientConfig.ui.surface_color}
+            />
+          ))}
+        </div>
+      )}
+
+      {!isLoading && receipts.length === 0 ? (
         <div
           className="flex flex-col items-center justify-center gap-3 mt-20"
           style={{ color: clientConfig.ui.text_gray_color }}
