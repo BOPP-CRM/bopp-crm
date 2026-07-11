@@ -78,6 +78,8 @@ export default function MemberReceipt() {
     }
   };
 
+  const line = `color-mix(in srgb, ${clientConfig.ui.text_gray_color} 22%, transparent)`;
+
   return (
     <div className="min-h-screen flex flex-col px-5 pb-10">
       <div className="flex items-center pt-8 pb-6 gap-4">
@@ -110,12 +112,27 @@ export default function MemberReceipt() {
       )}
 
       {!isLoading && receipts.length === 0 ? (
-        <div
-          className="flex flex-col items-center justify-center gap-3 mt-20"
-          style={{ color: clientConfig.ui.text_gray_color }}
-        >
-          <IconReceipt size={48} opacity={0.4} />
-          <p className="text-sm">ยังไม่มีใบเสร็จ</p>
+        <div className="flex flex-col items-center justify-center py-20 gap-4">
+          <div
+            className="w-16 h-16 rounded-full flex items-center justify-center"
+            style={{ backgroundColor: line }}
+          >
+            <IconReceipt size={30} color={clientConfig.ui.text_gray_color} />
+          </div>
+          <div className="text-center">
+            <p
+              className="text-lg font-semibold"
+              style={{ color: clientConfig.ui.text_color }}
+            >
+              ยังไม่มีการสะสมคะแนนจากใบเสร็จ
+            </p>
+            <p
+              className="text-sm mt-1"
+              style={{ color: clientConfig.ui.text_gray_color }}
+            >
+              ระบบจะทำการตรวจสอบและเพิ่มคะแนนให้คุณโดยอัตโนมัติ
+            </p>
+          </div>
         </div>
       ) : (
         <div className="flex flex-col gap-3">
