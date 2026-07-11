@@ -75,6 +75,38 @@ export default function Page() {
     setStep("otp");
   };
 
+  const verifyOtpIfComplete = async (newOtp: string[]) => {
+    if (!newOtp.every((d) => d !== "")) return;
+    setFullLoading(true);
+    const response = await backendClient.verifyEmail(clientConfig.slug, {
+      otp: newOtp.join(""),
+      ref: ref,
+    });
+    setFullLoading(false);
+    if (isErrorResponse(response)) {
+      openAlert({
+        title: "เกิดข้อผิดพลาด",
+        message: response.message,
+      });
+      return;
+    }
+    const appProfile = await backendClient.getUserInfo(clientConfig.slug);
+    if (isErrorResponse(appProfile)) {
+      router.push(`/${clientConfig.slug}`);
+      return;
+    }
+    setAppUserProfile(appProfile);
+    if (appProfile.force_verify_phone) {
+      router.replace(`/${clientConfig.slug}/verify-phone`);
+    } else if (appProfile.force_verify_email) {
+      router.replace(`/${clientConfig.slug}/verify-email`);
+    } else if (appProfile.is_updated_user_info === false) {
+      router.replace(`/${clientConfig.slug}/member-info`);
+    } else {
+      router.replace(`/${clientConfig.slug}`);
+    }
+  };
+
   const handleOtpChange = async (value: string, index: number) => {
     if (!/^\d*$/.test(value)) return;
 
@@ -87,39 +119,20 @@ export default function Page() {
       inputRefs.current[index + 1]?.focus();
     }
 
-    if (newOtp.every((d) => d !== "")) {
-      setFullLoading(true);
-      const response = await backendClient.verifyEmail(clientConfig.slug, {
-        otp: newOtp.join(""),
-        ref: ref,
-      });
-      setFullLoading(false);
-      if (isErrorResponse(response)) {
-        openAlert({
-          title: "เกิดข้อผิดพลาด",
-          message: response.message,
-        });
-        return;
-      }
+    await verifyOtpIfComplete(newOtp);
+  };
 
-      const appProfile = await backendClient.getUserInfo(clientConfig.slug);
-      if (isErrorResponse(appProfile)) {
-        router.push(`/${clientConfig.slug}`);
-        return;
-      }
-
-      setAppUserProfile(appProfile);
-
-      if (appProfile.force_verify_phone) {
-        router.replace(`/${clientConfig.slug}/verify-phone`);
-      } else if (appProfile.force_verify_email) {
-        router.replace(`/${clientConfig.slug}/verify-email`);
-      } else if (appProfile.is_updated_user_info === false) {
-        router.replace(`/${clientConfig.slug}/member-info`);
-      } else {
-        router.replace(`/${clientConfig.slug}`);
-      }
+  const handleOtpPaste = (e: React.ClipboardEvent, index: number) => {
+    e.preventDefault();
+    const digits = e.clipboardData.getData("text").replace(/\D/g, "");
+    if (!digits) return;
+    const newOtp = [...otp];
+    for (let i = 0; i < digits.length && index + i < 6; i++) {
+      newOtp[index + i] = digits[i];
     }
+    setOtp(newOtp);
+    inputRefs.current[Math.min(index + digits.length, 5)]?.focus();
+    verifyOtpIfComplete(newOtp);
   };
 
   const handleBackspace = (e: React.KeyboardEvent, index: number) => {
@@ -286,6 +299,7 @@ export default function Page() {
                 inputMode="numeric"
                 onChange={(e) => handleOtpChange(e.target.value, index)}
                 onKeyDown={(e) => handleBackspace(e, index)}
+                onPaste={(e) => handleOtpPaste(e, index)}
                 className="w-12 h-12 bg-white shadow-md border-2 rounded-lg text-center text-2xl font-bold outline-none"
                 style={{
                   background: clientConfig.ui.surface_color,
