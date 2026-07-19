@@ -21,7 +21,7 @@ export default function MenuSection() {
         color: clientConfig.ui.text_white_color,
       }}
     >
-      {clientConfig.warranty.enabled && (
+      {clientConfig?.warranty?.enabled && (
         <>
           <div>
             <button
