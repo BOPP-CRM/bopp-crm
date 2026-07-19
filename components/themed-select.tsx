@@ -20,7 +20,7 @@ export default function ThemedSelect({
   onChange,
   disabled = false,
   label,
-  icon = <IconUser size={20} className="shrink-0" color="rgb(106, 114, 130)" />,
+  icon,
 }: ThemedSelectProps) {
   const { clientConfig } = useApp();
   const [isOpen, setIsOpen] = useState(false);
@@ -45,7 +45,7 @@ export default function ThemedSelect({
         }}
         onClick={() => !disabled && setIsOpen(true)}
       >
-        {icon}
+        {icon && <div className="shrink-0">{icon}</div>}
         <div className="flex-1 text-lg truncate">
           {selected ? (
             selected.name

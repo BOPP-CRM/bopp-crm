@@ -735,7 +735,12 @@ function ReceiptCameraModal({
                 <p className="block font-semibold mb-1">เลขใบเสร็จ</p>
                 <input
                   value={receiptNumber}
-                  onChange={(event) => setReceiptNumber(event.target.value)}
+                  onChange={(event) => {
+                    const value = event.target.value
+                      .replace(/[^a-zA-Z0-9]/g, "")
+                      .toUpperCase();
+                    setReceiptNumber(value);
+                  }}
                   placeholder="เลขใบเสร็จ"
                   className="w-full rounded-xl px-3 py-4"
                   style={{

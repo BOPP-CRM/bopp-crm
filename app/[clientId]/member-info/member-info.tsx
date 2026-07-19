@@ -12,7 +12,7 @@ import {
   type Province,
   type SubDistrict,
 } from "@/util/thai-address";
-import { IconChevronLeft, IconMapPin } from "@tabler/icons-react";
+import { IconChevronLeft, IconPhone, IconUser } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { IconMail, IconCalendar } from "@tabler/icons-react";
@@ -49,6 +49,9 @@ export default function MemberInfo() {
     ? JSON.parse(appUserProfile.address)
     : {};
 
+  const [addressLine, setAddressLine] = useState(
+    addressJson.address_line || "",
+  );
   const [provinceId, setProvinceId] = useState("");
   const [provinceName, setProvinceName] = useState("");
   const [districtId, setDistrictId] = useState("");
@@ -76,10 +79,14 @@ export default function MemberInfo() {
 
   const provinces: Province[] = getProvinces();
   const districts: District[] = provinceId
-    ? getDistrictsByProvince(provinceId)
+    ? getDistrictsByProvince(provinceId).sort((a, b) =>
+        a.name.localeCompare(b.name, "th"),
+      )
     : [];
   const subDistricts: SubDistrict[] = districtId
-    ? getSubDistrictsByDistrict(districtId)
+    ? getSubDistrictsByDistrict(districtId).sort((a, b) =>
+        a.name.localeCompare(b.name, "th"),
+      )
     : [];
 
   const handleProvinceChange = (id: string, name: string) => {
@@ -111,6 +118,7 @@ export default function MemberInfo() {
 
     setFullLoading(true);
     const address = {
+      address_line: addressLine.trim(),
       province: provinceName,
       district: districtName,
       sub_district: subDistrictName,
@@ -261,7 +269,7 @@ export default function MemberInfo() {
               value={phone}
               onChange={setPhone}
               placeholder="เบอร์โทรศัพท์"
-              icon={<IconMapPin size={20} />}
+              icon={<IconPhone size={20} />}
               inputMode="numeric"
               disabled
             />
@@ -280,6 +288,12 @@ export default function MemberInfo() {
             options={GENDER_OPTIONS}
             value={gender}
             onChange={(id) => setGender(id as "M" | "F" | "O")}
+            icon={
+              <IconUser
+                size={20}
+                style={{ color: clientConfig.ui.text_gray_color }}
+              />
+            }
           />
         </div>
 
@@ -295,7 +309,14 @@ export default function MemberInfo() {
             value={birthDate}
             onChange={setBirthDate}
             placeholder="วันเกิด"
-            icon={<IconCalendar size={20} color="rgb(106, 114, 130)" />}
+            icon={
+              <IconCalendar
+                size={20}
+                style={{
+                  color: clientConfig.ui.text_gray_color,
+                }}
+              />
+            }
           />
         </div>
 
@@ -305,6 +326,12 @@ export default function MemberInfo() {
         >
           ที่อยู่ (ไม่บังคับ)
         </div>
+
+        <Input
+          value={addressLine}
+          onChange={setAddressLine}
+          placeholder="บ้านเลขที่ / หมู่บ้าน / อาคาร"
+        />
 
         <ThemedSelect
           placeholder="จังหวัด"
@@ -333,7 +360,6 @@ export default function MemberInfo() {
           value={postalCode}
           onChange={setPostalCode}
           placeholder="รหัสไปรษณีย์"
-          icon={<IconMapPin size={20} />}
           inputMode="numeric"
         />
       </div>

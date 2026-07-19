@@ -237,9 +237,12 @@ export default function Warranty() {
                   <Input
                     type="text"
                     value={product.serialNumber}
-                    onChange={(v) =>
-                      updateProduct(product.id, { serialNumber: v })
-                    }
+                    onChange={(v) => {
+                      const value = v
+                        .replace(/[^a-zA-Z0-9]/g, "")
+                        .toUpperCase();
+                      updateProduct(product.id, { serialNumber: value });
+                    }}
                     placeholder="SN7F8K2L9P0Q4R1S"
                   />
                 </div>
@@ -253,9 +256,12 @@ export default function Warranty() {
                   <Input
                     type="text"
                     value={product.receiptNumber}
-                    onChange={(v) =>
-                      updateProduct(product.id, { receiptNumber: v })
-                    }
+                    onChange={(v) => {
+                      const value = String(v)
+                        .replace(/[^a-zA-Z0-9]/g, "")
+                        .toUpperCase();
+                      updateProduct(product.id, { receiptNumber: value });
+                    }}
                     placeholder="หมายเลขใบเสร็จรับเงิน"
                   />
                 </div>
