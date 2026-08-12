@@ -75,25 +75,6 @@ export default function CouponSection() {
           })}
         </div>
       )}
-      <div className="flex flex-col gap-4">
-        {coupons.map((coupon, index) => {
-          const currentPoint =
-            userPoint.find((point) => point.currency.id === coupon.currency.id)
-              ?.balance || 0;
-          const canUse = currentPoint >= coupon.value;
-
-          return (
-            <CouponCard
-              key={index}
-              coupon={coupon}
-              canUse={canUse}
-              onClick={() => {
-                router.push(`/${clientConfig.slug}/coupon/${coupon.id}`);
-              }}
-            />
-          );
-        })}
-      </div>
     </section>
   );
 }
