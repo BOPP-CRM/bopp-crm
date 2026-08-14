@@ -16,6 +16,8 @@ import {
   CouponType,
   UserInfoPayload,
   UserReceipt,
+  OmisellClaim,
+  OmisellClaimSubmitRequest,
   WarrantyOptionResponse,
   WarrantySubmissionRequest,
   Warranty as WarrantyItem,
@@ -382,6 +384,70 @@ export class BackendClient {
       );
 
       return response.data.receipts;
+    } catch (e) {
+      return handlerError(e);
+    }
+  }
+
+  async submitOmisellClaim(
+    clientId: string,
+    userId: string,
+    payload: OmisellClaimSubmitRequest,
+  ): Promise<ErrorResponse | OmisellClaim> {
+    try {
+      const response = await this.client.post(
+        `/partner/${clientId}/user/${userId}/omisell-claim`,
+        payload,
+      );
+
+      return response.data.claim ?? response.data;
+    } catch (e) {
+      return handlerError(e);
+    }
+  }
+
+  async listOmisellClaims(
+    clientId: string,
+    userId: string,
+  ): Promise<ErrorResponse | OmisellClaim[]> {
+    try {
+      const response = await this.client.get(
+        `/partner/${clientId}/user/${userId}/omisell-claim`,
+      );
+
+      return response.data.claims ?? response.data;
+    } catch (e) {
+      return handlerError(e);
+    }
+  }
+
+  async getOmisellClaimById(
+    clientId: string,
+    userId: string,
+    claimId: string,
+  ): Promise<ErrorResponse | OmisellClaim> {
+    try {
+      const response = await this.client.get(
+        `/partner/${clientId}/user/${userId}/omisell-claim/${claimId}`,
+      );
+
+      return response.data.claim ?? response.data;
+    } catch (e) {
+      return handlerError(e);
+    }
+  }
+
+  async recheckOmisellClaim(
+    clientId: string,
+    userId: string,
+    claimId: string,
+  ): Promise<ErrorResponse | OmisellClaim> {
+    try {
+      const response = await this.client.post(
+        `/partner/${clientId}/user/${userId}/omisell-claim/${claimId}/recheck`,
+      );
+
+      return response.data.claim ?? response.data;
     } catch (e) {
       return handlerError(e);
     }

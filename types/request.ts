@@ -314,6 +314,25 @@ export interface RewardPoint {
   };
 }
 
+export type OmisellPlatform = "shopee" | "lazada" | "tiktok" | "other";
+
+export type OmisellClaimState = "pending" | "approved" | "rejected";
+
+export interface OmisellClaim {
+  id: number;
+  platform: OmisellPlatform;
+  order_number: string;
+  state: OmisellClaimState;
+  submitted_date?: string;
+  updated_date?: string;
+  reward_point?: RewardPoint;
+}
+
+export interface OmisellClaimSubmitRequest {
+  platform: OmisellPlatform;
+  orderNumber: string;
+}
+
 export interface WarrantyOptionResponse {
   enabled: boolean;
   products: WarrantyProduct[];
