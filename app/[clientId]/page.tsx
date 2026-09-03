@@ -13,6 +13,7 @@ import { formatDate } from "@/util/format-date";
 import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import MenuSection from "@/components/menu-section";
+import CollectPointSection from "@/components/collect-point-section";
 
 export default function Home() {
   const { clientConfig } = useApp();
@@ -60,8 +61,8 @@ export default function Home() {
       <TierCard />
       <MenuSection />
       <NewsSection />
+      <CollectPointSection />
       <CouponSection />
-
       {showModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 px-8">
           <div

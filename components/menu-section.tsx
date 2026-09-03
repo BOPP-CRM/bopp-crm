@@ -111,7 +111,9 @@ export default function MenuSection() {
         >
           <IconCamera size={30} />
         </button>
-        <p className="w-15 text-xs mt-1.5 text-center line-clamp-2">สะสมแต้ม</p>
+        <p className="w-15 text-xs mt-1.5 text-center line-clamp-2">
+          ถ่ายใบเสร็จ
+        </p>
       </div>
       <div>
         <button
