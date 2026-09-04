@@ -91,11 +91,12 @@ export default function CollectPointSection() {
         return;
       }
 
-      const point = response.reward_point?.value;
+      const rewardPoint = response.reward_point;
+      const currencyName = rewardPoint?.currency?.name || "คะแนน";
       await openAlert({
         title: "สะสมคะแนนสำเร็จ",
-        message: point
-          ? `คุณได้รับ ${point} คะแนน`
+        message: rewardPoint?.value
+          ? `คุณได้รับ ${rewardPoint.value} ${currencyName}`
           : "คุณได้รับคะแนนเรียบร้อยแล้ว",
       });
       setOrderNumber("");
