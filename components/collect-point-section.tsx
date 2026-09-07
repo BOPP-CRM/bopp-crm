@@ -85,15 +85,19 @@ export default function CollectPointSection() {
 
       if (isErrorResponse(response)) {
         await openAlert({
-          title: "ส่งคำขอไม่สำเร็จ",
-          message: response.message || "ไม่สามารถส่งคำขอได้",
+          title: "สะสมคะแนนไม่สำเร็จ",
+          message: response.message || "ไม่สามารถสะสมคะแนนได้",
         });
         return;
       }
 
+      const rewardPoint = response.reward_point;
+      const currencyName = rewardPoint?.currency?.name || "คะแนน";
       await openAlert({
-        title: "ส่งคำขอสำเร็จ",
-        message: "กรุณารอการตรวจสอบจากร้านค้า",
+        title: "สะสมคะแนนสำเร็จ",
+        message: rewardPoint?.value
+          ? `คุณได้รับ ${rewardPoint.value} ${currencyName}`
+          : "คุณได้รับคะแนนเรียบร้อยแล้ว",
       });
       setOrderNumber("");
     } finally {
