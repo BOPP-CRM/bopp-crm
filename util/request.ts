@@ -18,6 +18,7 @@ import {
   UserReceipt,
   OmisellClaim,
   OmisellClaimSubmitRequest,
+  LazadaClaimResponse,
   WarrantyOptionResponse,
   WarrantySubmissionRequest,
   Warranty as WarrantyItem,
@@ -432,6 +433,21 @@ export class BackendClient {
       );
 
       return response.data.claim ?? response.data;
+    } catch (e) {
+      return handlerError(e);
+    }
+  }
+
+  async submitLazadaClaim(
+    clientId: string,
+    orderNumber: string,
+  ): Promise<ErrorResponse | LazadaClaimResponse> {
+    try {
+      const response = await this.client.post(
+        `/partner/${clientId}/user/lazada-claim`,
+        { order_number: orderNumber },
+      );
+      return response.data;
     } catch (e) {
       return handlerError(e);
     }
