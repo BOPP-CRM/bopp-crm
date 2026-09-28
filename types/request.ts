@@ -49,6 +49,7 @@ export interface PartnerAppConfig {
   ads: AdsItem[];
   tier: Tier[];
   warranty: WarrantyOptionResponse;
+  integrations: Integrations;
 }
 
 export interface AdsItem {
@@ -94,6 +95,10 @@ export function normalizePartnerAppConfig(
     ui: {
       ...config.ui,
       ui_custom_fields: normalizeUiCustomFields(config.ui?.ui_custom_fields),
+    },
+    integrations: {
+      lazada: { enabled: config.integrations?.lazada?.enabled ?? false },
+      omisell: { enabled: config.integrations?.omisell?.enabled ?? false },
     },
   };
 }
@@ -141,6 +146,10 @@ export const initPartnerAppConfig = (): PartnerAppConfig => ({
     enabled: false,
     products: [],
     contributors: [],
+  },
+  integrations: {
+    lazada: { enabled: false },
+    omisell: { enabled: false },
   },
 });
 
@@ -312,6 +321,29 @@ export interface RewardPoint {
     is_default: boolean;
     is_total_spending: boolean;
   };
+}
+
+export interface Integrations {
+  lazada: { enabled: boolean };
+  omisell: { enabled: boolean };
+}
+
+export interface LazadaClaim {
+  id: number;
+  order_number: string;
+  lazada_order_id: string;
+  user_id: number;
+  display_name: string;
+  amount: number;
+  used_flat_fallback: boolean;
+  qualifying_item_count: number;
+  total_item_count: number;
+  reward_value: number;
+  claimed_at: string;
+}
+
+export interface LazadaClaimResponse {
+  claim: LazadaClaim;
 }
 
 export type OmisellPlatform = "shopee" | "lazada" | "tiktok" | "other";
