@@ -90,7 +90,7 @@ export default function RootLayout({
     if (!clientConfig.name) return;
 
     const { background_color } = clientConfig.ui;
-    document.title = `${clientConfig.name} CRM`;
+    document.title = `${clientConfig.name} FAMILY`;
     document.body.style.backgroundColor = background_color;
 
     if (clientConfig.logo_url) {
