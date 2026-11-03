@@ -320,48 +320,53 @@ export default function MemberInfo() {
           />
         </div>
 
-        <div
-          className="pt-1 pb-0.5 px-1 text-xs"
-          style={{ color: clientConfig.ui.primary_color }}
-        >
-          ที่อยู่ (ไม่บังคับ)
-        </div>
+        {/* ที่อยู่ไม่บังคับ: ซ่อนตอนสมัครครั้งแรก แสดงตอนแก้ไขข้อมูลทีหลัง */}
+        {appUserProfile?.is_updated_user_info && (
+          <>
+            <div
+              className="pt-1 pb-0.5 px-1 text-xs"
+              style={{ color: clientConfig.ui.primary_color }}
+            >
+              ที่อยู่ (ไม่บังคับ)
+            </div>
 
-        <Input
-          value={addressLine}
-          onChange={setAddressLine}
-          placeholder="บ้านเลขที่ / หมู่บ้าน / อาคาร"
-        />
+            <Input
+              value={addressLine}
+              onChange={setAddressLine}
+              placeholder="บ้านเลขที่ / หมู่บ้าน / อาคาร"
+            />
 
-        <ThemedSelect
-          placeholder="จังหวัด"
-          options={provinces.map((p) => ({ id: p.id, name: p.name }))}
-          value={provinceId}
-          onChange={handleProvinceChange}
-        />
+            <ThemedSelect
+              placeholder="จังหวัด"
+              options={provinces.map((p) => ({ id: p.id, name: p.name }))}
+              value={provinceId}
+              onChange={handleProvinceChange}
+            />
 
-        <ThemedSelect
-          placeholder="อำเภอ / เขต"
-          options={districts.map((d) => ({ id: d.id, name: d.name }))}
-          value={districtId}
-          onChange={handleDistrictChange}
-          disabled={!provinceId}
-        />
+            <ThemedSelect
+              placeholder="อำเภอ / เขต"
+              options={districts.map((d) => ({ id: d.id, name: d.name }))}
+              value={districtId}
+              onChange={handleDistrictChange}
+              disabled={!provinceId}
+            />
 
-        <ThemedSelect
-          placeholder="ตำบล / แขวง"
-          options={subDistricts.map((s) => ({ id: s.id, name: s.name }))}
-          value={subDistrictId}
-          onChange={handleSubDistrictChange}
-          disabled={!districtId}
-        />
+            <ThemedSelect
+              placeholder="ตำบล / แขวง"
+              options={subDistricts.map((s) => ({ id: s.id, name: s.name }))}
+              value={subDistrictId}
+              onChange={handleSubDistrictChange}
+              disabled={!districtId}
+            />
 
-        <Input
-          value={postalCode}
-          onChange={setPostalCode}
-          placeholder="รหัสไปรษณีย์"
-          inputMode="numeric"
-        />
+            <Input
+              value={postalCode}
+              onChange={setPostalCode}
+              placeholder="รหัสไปรษณีย์"
+              inputMode="numeric"
+            />
+          </>
+        )}
       </div>
 
       {termAndCondition && !appUserProfile?.is_updated_user_info && (
