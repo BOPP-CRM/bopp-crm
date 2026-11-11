@@ -50,6 +50,38 @@ export interface PartnerAppConfig {
   tier: Tier[];
   warranty: WarrantyOptionResponse;
   integrations: Integrations;
+  registration_form: RegistrationFormConfig;
+}
+
+export type RegistrationFieldType =
+  | "gender"
+  | "date"
+  | "address"
+  | "text"
+  | "textarea"
+  | "select";
+
+export interface RegistrationFieldOption {
+  value: string;
+  label: string;
+}
+
+export interface RegistrationField {
+  id?: number;
+  key: string;
+  label: string;
+  field_type: RegistrationFieldType;
+  is_system: boolean;
+  visible: boolean;
+  required: boolean;
+  sequence: number;
+  active?: boolean;
+  options: RegistrationFieldOption[];
+}
+
+export interface RegistrationFormConfig {
+  configured: boolean;
+  fields: RegistrationField[];
 }
 
 export interface AdsItem {
@@ -87,6 +119,36 @@ export function normalizeUiCustomFields(fields: unknown): UiCustomField[] {
   return [];
 }
 
+export function normalizeRegistrationForm(
+  form: unknown,
+): RegistrationFormConfig {
+  if (!form || typeof form !== "object") {
+    return { configured: false, fields: [] };
+  }
+  const record = form as Record<string, unknown>;
+  const fields = Array.isArray(record.fields)
+    ? record.fields.filter(
+        (field): field is RegistrationField =>
+          field != null &&
+          typeof field === "object" &&
+          typeof (field as RegistrationField).key === "string" &&
+          typeof (field as RegistrationField).label === "string" &&
+          typeof (field as RegistrationField).field_type === "string",
+      )
+    : [];
+  return {
+    configured: Boolean(record.configured),
+    fields: fields.map((field) => ({
+      ...field,
+      visible: Boolean(field.visible),
+      required: Boolean(field.required),
+      is_system: Boolean(field.is_system),
+      sequence: Number(field.sequence) || 0,
+      options: Array.isArray(field.options) ? field.options : [],
+    })),
+  };
+}
+
 export function normalizePartnerAppConfig(
   config: PartnerAppConfig,
 ): PartnerAppConfig {
@@ -100,6 +162,7 @@ export function normalizePartnerAppConfig(
       lazada: { enabled: config.integrations?.lazada?.enabled ?? false },
       omisell: { enabled: config.integrations?.omisell?.enabled ?? false },
     },
+    registration_form: normalizeRegistrationForm(config.registration_form),
   };
 }
 
@@ -151,6 +214,10 @@ export const initPartnerAppConfig = (): PartnerAppConfig => ({
     lazada: { enabled: false },
     omisell: { enabled: false },
   },
+  registration_form: {
+    configured: false,
+    fields: [],
+  },
 });
 
 export interface User {
@@ -167,6 +234,7 @@ export interface User {
   is_updated_user_info: boolean;
   tier: Tier;
   address?: string;
+  custom_fields?: Record<string, string>;
 }
 
 export interface UserInfoPayload {
@@ -177,6 +245,7 @@ export interface UserInfoPayload {
   email: string;
   phone: string;
   address?: string;
+  custom_fields?: Record<string, string>;
 }
 
 export interface Tier {

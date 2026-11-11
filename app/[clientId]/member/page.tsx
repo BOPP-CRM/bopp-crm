@@ -154,22 +154,53 @@ export default function Page() {
               ? "หญิง"
               : appUserProfile?.gender === "M"
                 ? "ชาย"
-                : "-"}
+                : appUserProfile?.gender === "O"
+                  ? "ไม่ระบุ"
+                  : "-"}
           </div>
         </div>
         <div
-          className="text-md flex justify-between py-3 px-4"
+          className={`text-md flex justify-between py-3 px-4 ${
+            Object.keys(appUserProfile?.custom_fields || {}).length > 0
+              ? "border-b-[0.5px]"
+              : ""
+          }`}
           style={{
             borderColor: `color-mix(in srgb, ${clientConfig.ui.text_gray_color} 80%, transparent)`,
           }}
         >
           <div className="font-medium text-sm">ที่อยู่</div>
-          <div className="text-gray-500 text-xs font-mono">
+          <div className="text-gray-500 text-xs font-mono text-right max-w-[60%]">
             {addressJson
               ? `${addressJson.province || ""} ${addressJson.district || ""} ${addressJson.sub_district || ""} ${addressJson.postal_code || ""}`
               : "-"}
           </div>
         </div>
+        {Object.entries(appUserProfile?.custom_fields || {}).map(
+          ([key, value], index, entries) => {
+            const fieldMeta = clientConfig.registration_form?.fields?.find(
+              (field) => field.key === key,
+            );
+            return (
+              <div
+                key={key}
+                className={`text-md flex justify-between py-3 px-4 ${
+                  index < entries.length - 1 ? "border-b-[0.5px]" : ""
+                }`}
+                style={{
+                  borderColor: `color-mix(in srgb, ${clientConfig.ui.text_gray_color} 80%, transparent)`,
+                }}
+              >
+                <div className="font-medium text-sm">
+                  {fieldMeta?.label || key}
+                </div>
+                <div className="text-gray-500 text-xs font-mono text-right max-w-[60%]">
+                  {value || "-"}
+                </div>
+              </div>
+            );
+          },
+        )}
       </div>
       <div
         className="h-12 rounded-[18px] border-[0.5px] flex items-center justify-center mt-6 cursor-pointer gap-2 text-[13px]"
