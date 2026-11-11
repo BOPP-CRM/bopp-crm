@@ -118,8 +118,20 @@ export class BackendClient {
   async getUserInfo(clientId: string): Promise<ErrorResponse | User> {
     try {
       const response = await this.client.get(`/partner/${clientId}/user`);
-
-      return response.data;
+      const data = response.data as User;
+      const customFields =
+        data?.custom_fields && typeof data.custom_fields === "object"
+          ? Object.fromEntries(
+              Object.entries(data.custom_fields).map(([key, value]) => [
+                key,
+                value == null ? "" : String(value),
+              ]),
+            )
+          : {};
+      return {
+        ...data,
+        custom_fields: customFields,
+      };
     } catch (e) {
       return handlerError(e);
     }

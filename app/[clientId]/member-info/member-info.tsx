@@ -2,7 +2,10 @@
 import Input from "@/components/input";
 import ThemedSelect from "@/components/themed-select";
 import { useApp } from "@/components/providers/app-provider";
-import { isErrorResponse } from "@/types/request";
+import {
+  isErrorResponse,
+  type RegistrationField,
+} from "@/types/request";
 import {
   getDistrictsByProvince,
   getProvinces,
@@ -14,7 +17,7 @@ import {
 } from "@/util/thai-address";
 import { IconChevronLeft, IconPhone, IconUser } from "@tabler/icons-react";
 import { useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { IconMail, IconCalendar } from "@tabler/icons-react";
 
 const GENDER_OPTIONS = [
@@ -36,14 +39,31 @@ export default function MemberInfo() {
   } = useApp();
   const router = useRouter();
 
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
+  const registrationForm = clientConfig.registration_form;
+  const configured = Boolean(registrationForm?.configured);
+  const visibleFields = useMemo(() => {
+    if (!configured) return [] as RegistrationField[];
+    return [...(registrationForm.fields || [])]
+      .filter((field) => field.visible && field.active !== false)
+      .sort((a, b) => a.sequence - b.sequence);
+  }, [configured, registrationForm]);
+
   const [gender, setGender] = useState<"M" | "F" | "O" | "">(
     (appUserProfile?.gender as "M" | "F" | "O") || "",
   );
   const [email, setEmail] = useState(appUserProfile?.email || "");
   const [phone, setPhone] = useState(appUserProfile?.phone || "");
   const [birthDate, setBirthDate] = useState(appUserProfile?.birth_date || "");
+  const [customValues, setCustomValues] = useState<Record<string, string>>(
+    () => {
+      const initial: Record<string, string> = {};
+      const existing = appUserProfile?.custom_fields || {};
+      for (const [key, value] of Object.entries(existing)) {
+        initial[key] = value == null ? "" : String(value);
+      }
+      return initial;
+    },
+  );
 
   const addressJson = appUserProfile?.address
     ? JSON.parse(appUserProfile.address)
@@ -113,6 +133,50 @@ export default function MemberInfo() {
     setPostalCode(getZipCode(id));
   };
 
+  const showAddress = configured
+    ? visibleFields.some((field) => field.key === "address")
+    : Boolean(appUserProfile?.is_updated_user_info);
+
+  const addressRequired = configured
+    ? visibleFields.some(
+        (field) => field.key === "address" && field.required,
+      )
+    : false;
+
+  const isAddressFilled = Boolean(
+    addressLine.trim() ||
+      provinceName ||
+      districtName ||
+      subDistrictName ||
+      postalCode,
+  );
+
+  const requiredCustomMissing = configured
+    ? visibleFields.some((field) => {
+        if (["gender", "birth_date", "address"].includes(field.key)) {
+          return false;
+        }
+        if (!field.required) return false;
+        return !(customValues[field.key] || "").trim();
+      })
+    : false;
+
+  const legacyRequiredMissing = !gender || !birthDate;
+  const configuredRequiredMissing = visibleFields.some((field) => {
+    if (field.key === "gender") return field.required && !gender;
+    if (field.key === "birth_date") return field.required && !birthDate;
+    if (field.key === "address") {
+      return field.required && !isAddressFilled;
+    }
+    return field.required && !(customValues[field.key] || "").trim();
+  });
+
+  const canSubmit =
+    (acceptedTerms || Boolean(appUserProfile?.is_updated_user_info)) &&
+    !(configured ? configuredRequiredMissing : legacyRequiredMissing) &&
+    !(addressRequired && !isAddressFilled) &&
+    !requiredCustomMissing;
+
   const handleSubmit = async () => {
     if (!userProfile?.userId) return;
 
@@ -124,13 +188,37 @@ export default function MemberInfo() {
       sub_district: subDistrictName,
       postal_code: postalCode,
     };
-    const response = await backendClient.updateUserInfo(clientConfig.slug, {
-      // first_name: firstName.trim(),
-      // last_name: lastName.trim(),
-      gender: gender as "M" | "F" | "O",
-      birth_date: birthDate,
-      address: JSON.stringify(address),
-    });
+
+    const payload: Record<string, unknown> = {};
+
+    if (!configured || visibleFields.some((field) => field.key === "gender")) {
+      payload.gender = gender as "M" | "F" | "O";
+    }
+    if (
+      !configured ||
+      visibleFields.some((field) => field.key === "birth_date")
+    ) {
+      payload.birth_date = birthDate;
+    }
+    if (showAddress) {
+      payload.address = JSON.stringify(address);
+    }
+
+    if (configured) {
+      const customPayload: Record<string, string> = {};
+      for (const field of visibleFields) {
+        if (["gender", "birth_date", "address"].includes(field.key)) continue;
+        customPayload[field.key] = customValues[field.key] || "";
+      }
+      if (Object.keys(customPayload).length > 0) {
+        payload.custom_fields = customPayload;
+      }
+    }
+
+    const response = await backendClient.updateUserInfo(
+      clientConfig.slug,
+      payload,
+    );
     setFullLoading(false);
 
     if (isErrorResponse(response)) {
@@ -186,6 +274,187 @@ export default function MemberInfo() {
 
   if (!userProfile) return null;
 
+  const renderFieldLabel = (label: string, required?: boolean) => (
+    <div
+      className="pb-0.5 px-1 text-xs mb-1"
+      style={{ color: clientConfig.ui.primary_color }}
+    >
+      {label}
+      {required ? "*" : ""}
+    </div>
+  );
+
+  const renderAddressBlock = (required?: boolean) => (
+    <>
+      <div
+        className="pt-1 pb-0.5 px-1 text-xs"
+        style={{ color: clientConfig.ui.primary_color }}
+      >
+        ที่อยู่{required ? "*" : " (ไม่บังคับ)"}
+      </div>
+
+      <Input
+        value={addressLine}
+        onChange={setAddressLine}
+        placeholder="บ้านเลขที่ / หมู่บ้าน / อาคาร"
+      />
+
+      <ThemedSelect
+        placeholder="จังหวัด"
+        options={provinces.map((p) => ({ id: p.id, name: p.name }))}
+        value={provinceId}
+        onChange={handleProvinceChange}
+      />
+
+      <ThemedSelect
+        placeholder="อำเภอ / เขต"
+        options={districts.map((d) => ({ id: d.id, name: d.name }))}
+        value={districtId}
+        onChange={handleDistrictChange}
+        disabled={!provinceId}
+      />
+
+      <ThemedSelect
+        placeholder="ตำบล / แขวง"
+        options={subDistricts.map((s) => ({ id: s.id, name: s.name }))}
+        value={subDistrictId}
+        onChange={handleSubDistrictChange}
+        disabled={!districtId}
+      />
+
+      <Input
+        value={postalCode}
+        onChange={setPostalCode}
+        placeholder="รหัสไปรษณีย์"
+        inputMode="numeric"
+      />
+    </>
+  );
+
+  const renderConfiguredField = (field: RegistrationField) => {
+    if (field.key === "gender" || field.field_type === "gender") {
+      return (
+        <div key={field.key}>
+          {renderFieldLabel(field.label, field.required)}
+          <ThemedSelect
+            placeholder={`เลือก${field.label}`}
+            options={GENDER_OPTIONS}
+            value={gender}
+            onChange={(id) => setGender(id as "M" | "F" | "O")}
+            icon={
+              <IconUser
+                size={20}
+                style={{ color: clientConfig.ui.text_gray_color }}
+              />
+            }
+          />
+        </div>
+      );
+    }
+
+    if (field.key === "birth_date") {
+      return (
+        <div key={field.key}>
+          {renderFieldLabel(field.label, field.required)}
+          <Input
+            type="date"
+            value={birthDate}
+            onChange={setBirthDate}
+            placeholder={field.label}
+            icon={
+              <IconCalendar
+                size={20}
+                style={{
+                  color: clientConfig.ui.text_gray_color,
+                }}
+              />
+            }
+          />
+        </div>
+      );
+    }
+
+    if (field.key === "address" || field.field_type === "address") {
+      return <div key={field.key}>{renderAddressBlock(field.required)}</div>;
+    }
+
+    if (field.field_type === "select") {
+      return (
+        <div key={field.key}>
+          {renderFieldLabel(field.label, field.required)}
+          <ThemedSelect
+            placeholder={`เลือก${field.label}`}
+            options={(field.options || []).map((option) => ({
+              id: option.value,
+              name: option.label || option.value,
+            }))}
+            value={customValues[field.key] || ""}
+            onChange={(id) =>
+              setCustomValues((prev) => ({ ...prev, [field.key]: id }))
+            }
+          />
+        </div>
+      );
+    }
+
+    if (field.field_type === "textarea") {
+      return (
+        <div key={field.key}>
+          {renderFieldLabel(field.label, field.required)}
+          <textarea
+            value={customValues[field.key] || ""}
+            onChange={(event) =>
+              setCustomValues((prev) => ({
+                ...prev,
+                [field.key]: event.target.value,
+              }))
+            }
+            placeholder={field.label}
+            className="w-full min-h-24 rounded-[14px] border border-white/10 bg-black/20 px-4 py-3 text-sm outline-none"
+            style={{ color: clientConfig.ui.text_white_color }}
+          />
+        </div>
+      );
+    }
+
+    if (field.field_type === "date") {
+      return (
+        <div key={field.key}>
+          {renderFieldLabel(field.label, field.required)}
+          <Input
+            type="date"
+            value={customValues[field.key] || ""}
+            onChange={(value) =>
+              setCustomValues((prev) => ({ ...prev, [field.key]: value }))
+            }
+            placeholder={field.label}
+            icon={
+              <IconCalendar
+                size={20}
+                style={{
+                  color: clientConfig.ui.text_gray_color,
+                }}
+              />
+            }
+          />
+        </div>
+      );
+    }
+
+    return (
+      <div key={field.key}>
+        {renderFieldLabel(field.label, field.required)}
+        <Input
+          value={customValues[field.key] || ""}
+          onChange={(value) =>
+            setCustomValues((prev) => ({ ...prev, [field.key]: value }))
+          }
+          placeholder={field.label}
+        />
+      </div>
+    );
+  };
+
   return (
     <div className="min-h-screen flex flex-col px-5 pb-10">
       <div className="flex flex-col items-center pt-8 pb-6">
@@ -223,28 +492,9 @@ export default function MemberInfo() {
       </div>
 
       <div className="flex flex-col gap-4">
-        {/* <div className="flex gap-3">
-          <Input
-            value={firstName}
-            onChange={setFirstName}
-            placeholder="ชื่อ"
-            icon={<IconUser size={20} />}
-          />
-          <Input
-            value={lastName}
-            onChange={setLastName}
-            placeholder="นามสกุล"
-          />
-        </div> */}
-
         {appUserProfile?.email && (
           <div>
-            <div
-              className="pb-0.5 px-1 text-xs mb-1"
-              style={{ color: clientConfig.ui.primary_color }}
-            >
-              อีเมล
-            </div>
+            {renderFieldLabel("อีเมล")}
             <Input
               type="email"
               value={email}
@@ -258,12 +508,7 @@ export default function MemberInfo() {
 
         {appUserProfile?.phone && (
           <div>
-            <div
-              className="pb-0.5 px-1 text-xs mb-1"
-              style={{ color: clientConfig.ui.primary_color }}
-            >
-              เบอร์โทรศัพท์
-            </div>
+            {renderFieldLabel("เบอร์โทรศัพท์")}
             <Input
               type="tel"
               value={phone}
@@ -276,95 +521,46 @@ export default function MemberInfo() {
           </div>
         )}
 
-        <div>
-          <div
-            className="pb-0.5 px-1 text-xs mb-1"
-            style={{ color: clientConfig.ui.primary_color }}
-          >
-            เพศ*
-          </div>
-          <ThemedSelect
-            placeholder="เลือกเพศ"
-            options={GENDER_OPTIONS}
-            value={gender}
-            onChange={(id) => setGender(id as "M" | "F" | "O")}
-            icon={
-              <IconUser
-                size={20}
-                style={{ color: clientConfig.ui.text_gray_color }}
-              />
-            }
-          />
-        </div>
-
-        <div>
-          <div
-            className="pb-0.5 px-1 text-xs mb-1"
-            style={{ color: clientConfig.ui.primary_color }}
-          >
-            วันเกิด*
-          </div>
-          <Input
-            type="date"
-            value={birthDate}
-            onChange={setBirthDate}
-            placeholder="วันเกิด"
-            icon={
-              <IconCalendar
-                size={20}
-                style={{
-                  color: clientConfig.ui.text_gray_color,
-                }}
-              />
-            }
-          />
-        </div>
-
-        {/* ที่อยู่ไม่บังคับ: ซ่อนตอนสมัครครั้งแรก แสดงตอนแก้ไขข้อมูลทีหลัง */}
-        {appUserProfile?.is_updated_user_info && (
+        {configured ? (
+          visibleFields.map((field) => renderConfiguredField(field))
+        ) : (
           <>
-            <div
-              className="pt-1 pb-0.5 px-1 text-xs"
-              style={{ color: clientConfig.ui.primary_color }}
-            >
-              ที่อยู่ (ไม่บังคับ)
+            <div>
+              {renderFieldLabel("เพศ", true)}
+              <ThemedSelect
+                placeholder="เลือกเพศ"
+                options={GENDER_OPTIONS}
+                value={gender}
+                onChange={(id) => setGender(id as "M" | "F" | "O")}
+                icon={
+                  <IconUser
+                    size={20}
+                    style={{ color: clientConfig.ui.text_gray_color }}
+                  />
+                }
+              />
             </div>
 
-            <Input
-              value={addressLine}
-              onChange={setAddressLine}
-              placeholder="บ้านเลขที่ / หมู่บ้าน / อาคาร"
-            />
+            <div>
+              {renderFieldLabel("วันเกิด", true)}
+              <Input
+                type="date"
+                value={birthDate}
+                onChange={setBirthDate}
+                placeholder="วันเกิด"
+                icon={
+                  <IconCalendar
+                    size={20}
+                    style={{
+                      color: clientConfig.ui.text_gray_color,
+                    }}
+                  />
+                }
+              />
+            </div>
 
-            <ThemedSelect
-              placeholder="จังหวัด"
-              options={provinces.map((p) => ({ id: p.id, name: p.name }))}
-              value={provinceId}
-              onChange={handleProvinceChange}
-            />
-
-            <ThemedSelect
-              placeholder="อำเภอ / เขต"
-              options={districts.map((d) => ({ id: d.id, name: d.name }))}
-              value={districtId}
-              onChange={handleDistrictChange}
-              disabled={!provinceId}
-            />
-
-            <ThemedSelect
-              placeholder="ตำบล / แขวง"
-              options={subDistricts.map((s) => ({ id: s.id, name: s.name }))}
-              value={subDistrictId}
-              onChange={handleSubDistrictChange}
-              disabled={!districtId}
-            />
-
-            <Input
-              value={postalCode}
-              onChange={setPostalCode}
-              placeholder="รหัสไปรษณีย์"
-              inputMode="numeric"
-            />
+            {/* ที่อยู่ไม่บังคับ: ซ่อนตอนสมัครครั้งแรก แสดงตอนแก้ไขข้อมูลทีหลัง */}
+            {showAddress ? renderAddressBlock(false) : null}
           </>
         )}
       </div>
@@ -480,11 +676,7 @@ export default function MemberInfo() {
           boxShadow: `0 8px 24px -6px color-mix(in oklch, ${clientConfig.ui.primary_color} 60%, transparent)`,
           color: clientConfig.ui.button_text_color,
         }}
-        disabled={
-          (!acceptedTerms && !appUserProfile?.is_updated_user_info) ||
-          !gender ||
-          !birthDate
-        }
+        disabled={!canSubmit}
         onClick={handleSubmit}
       >
         บันทึกข้อมูล
