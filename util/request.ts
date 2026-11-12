@@ -24,37 +24,8 @@ import {
   Warranty as WarrantyItem,
 } from "@/types/request";
 import axios, { AxiosInstance } from "axios";
+import { handlerError } from "./api-error";
 import { getLiffUserToken } from "./line-liff";
-
-const handlerError = (error: unknown): ErrorResponse => {
-  if (axios.isAxiosError(error)) {
-    if (error.status === 403) {
-      return {
-        error: "session_expired",
-        message: "Session expired. Please login again.",
-      };
-    } else if (
-      error.response &&
-      error.response.data &&
-      error.response.data.message
-    ) {
-      return {
-        error: error.response.data.error,
-        message: error.response.data.message,
-      };
-    } else {
-      return {
-        error: error.message,
-        message: error.message,
-      };
-    }
-  } else {
-    return {
-      error: "unkmown",
-      message: "An unknow error occurred. try again!",
-    };
-  }
-};
 
 export class BackendClient {
   private readonly client: AxiosInstance;

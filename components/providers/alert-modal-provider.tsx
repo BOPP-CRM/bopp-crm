@@ -1,6 +1,7 @@
 "use client";
 
 import { PartnerAppConfig } from "@/types/request";
+import { splitTraceReference } from "@/util/trace-id";
 import {
   createContext,
   ReactNode,
@@ -11,6 +12,92 @@ import {
   useState,
 } from "react";
 import { useFullLoadingContext } from "./full-loading-provider";
+
+async function copyText(value: string): Promise<boolean> {
+  try {
+    if (navigator.clipboard?.writeText) {
+      await navigator.clipboard.writeText(value);
+      return true;
+    }
+  } catch {
+    // LINE and other webviews often reject the async clipboard API.
+  }
+
+  try {
+    const textarea = document.createElement("textarea");
+    textarea.value = value;
+    textarea.setAttribute("readonly", "");
+    textarea.style.position = "fixed";
+    textarea.style.top = "0";
+    textarea.style.left = "0";
+    textarea.style.opacity = "0";
+    document.body.appendChild(textarea);
+    textarea.focus();
+    textarea.select();
+    const copied = document.execCommand("copy");
+    document.body.removeChild(textarea);
+    return copied;
+  } catch {
+    return false;
+  }
+}
+
+function TraceReference({
+  traceId,
+  accentColor,
+  mutedColor,
+}: {
+  traceId: string;
+  accentColor?: string;
+  mutedColor?: string;
+}) {
+  const [copied, setCopied] = useState(false);
+
+  useEffect(() => {
+    if (!copied) return;
+    const timeoutId = window.setTimeout(() => setCopied(false), 2000);
+    return () => window.clearTimeout(timeoutId);
+  }, [copied]);
+
+  return (
+    <div
+      className="mt-3 rounded-2xl px-3 py-2 text-left"
+      style={{
+        background: mutedColor
+          ? `color-mix(in srgb, ${mutedColor} 14%, transparent)`
+          : "rgba(0,0,0,0.05)",
+      }}
+    >
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-[11px] leading-4" style={{ color: mutedColor }}>
+          รหัสอ้างอิง
+        </p>
+        <button
+          type="button"
+          className="shrink-0 rounded-xl px-2.5 py-1 text-xs font-medium active:scale-[0.99]"
+          style={{
+            color: accentColor,
+            background: accentColor
+              ? `color-mix(in srgb, ${accentColor} 12%, transparent)`
+              : "rgba(0,0,0,0.06)",
+          }}
+          aria-label="คัดลอกรหัสอ้างอิง"
+          onClick={(event) => {
+            event.stopPropagation();
+            void copyText(traceId).then((didCopy) => {
+              if (didCopy) setCopied(true);
+            });
+          }}
+        >
+          {copied ? "คัดลอกแล้ว" : "คัดลอก"}
+        </button>
+      </div>
+      <p className="mt-0.5 break-all font-mono text-[11px] leading-5 select-all">
+        {traceId}
+      </p>
+    </div>
+  );
+}
 
 export type OpenAlertOptions = {
   title?: string;
@@ -48,6 +135,10 @@ function AlertModal({
   } = options;
 
   const clientConfig = providerClientConfig;
+  const parsedMessage = splitTraceReference(message);
+  const displayMessage = parsedMessage.traceId
+    ? parsedMessage.message || "เกิดข้อผิดพลาด"
+    : message;
   return (
     <div
       className="fixed inset-0 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4 pb-4 pt-10"
@@ -82,8 +173,16 @@ function AlertModal({
               color: clientConfig?.ui.text_gray_color,
             }}
           >
-            {message}
+            {displayMessage}
           </p>
+          {parsedMessage.traceId ? (
+            <TraceReference
+              key={parsedMessage.traceId}
+              traceId={parsedMessage.traceId}
+              accentColor={clientConfig?.ui.primary_color}
+              mutedColor={clientConfig?.ui.text_gray_color}
+            />
+          ) : null}
         </div>
 
         <div className="px-5 pt-1 flex gap-2 items-center justify-center">
